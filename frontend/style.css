@@ -1,198 +1,92 @@
-:root {
-  --cyan: #4fe3ff;
-  --cyan-dim: #1a7d96;
-  --cyan-glow: rgba(79, 227, 255, 0.65);
-  --amber: #ffb648;
-  --bg: #02070d;
-  --panel: rgba(10, 26, 38, 0.45);
-}
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
-  background: radial-gradient(ellipse at center, #061521 0%, #02070d 70%, #000 100%);
-  color: var(--cyan);
-  font-family: "Rajdhani", sans-serif;
+  width: 100%;
+  background: #02070d;
   overflow: hidden;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(79, 227, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(79, 227, 255, 0.05) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-#hud {
-  position: relative;
-  height: 100vh;
-  display: grid;
-  grid-template-rows: auto 1fr auto auto auto;
-  padding: 20px clamp(16px, 4vw, 60px);
-  z-index: 1;
-}
-
-.corner {
-  position: fixed;
-  width: 46px;
-  height: 46px;
-  border: 2px solid var(--cyan);
-  opacity: 0.6;
-  filter: drop-shadow(0 0 6px var(--cyan-glow));
-}
-.tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
-.tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
-.bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
-.br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
-
-#topbar {
-  display: flex;
-  align-items: baseline;
-  gap: 18px;
-  border-bottom: 1px solid rgba(79, 227, 255, 0.2);
-  padding-bottom: 10px;
-}
-.brand {
-  font-family: "Orbitron", sans-serif;
-  font-weight: 900;
-  font-size: clamp(20px, 3vw, 34px);
-  letter-spacing: 8px;
-  text-shadow: 0 0 14px var(--cyan-glow);
-}
-.subtitle {
-  font-size: 13px;
-  letter-spacing: 2px;
-  opacity: 0.55;
-  text-transform: uppercase;
-}
-#clock {
-  margin-left: auto;
-  font-family: "Orbitron", sans-serif;
-  font-size: 18px;
-  letter-spacing: 3px;
-  color: var(--amber);
-  text-shadow: 0 0 10px rgba(255, 182, 72, 0.4);
-}
-
-#stage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  min-height: 0;
+  font-family: "Rajdhani", sans-serif;
+  color: #4fe3ff;
 }
 
 #orb {
-  width: clamp(200px, 36vh, 300px);
-  aspect-ratio: 1;
-  filter: drop-shadow(0 0 28px rgba(79, 227, 255, 0.3));
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -56%);
 }
 
-#state-label {
-  font-family: "Orbitron", sans-serif;
-  letter-spacing: 5px;
-  font-size: 14px;
-  text-transform: uppercase;
-  opacity: 0.85;
-  text-shadow: 0 0 10px var(--cyan-glow);
+#text-overlay {
+  position: fixed;
+  bottom: 110px;
+  left: 0; right: 0;
+  padding: 0 28px;
+  text-align: center;
+  pointer-events: none;
 }
 
-#transcript {
-  height: clamp(120px, 22vh, 240px);
-  overflow-y: auto;
-  padding: 14px 18px;
-  margin: 12px 0;
-  background: var(--panel);
-  border: 1px solid rgba(79, 227, 255, 0.18);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--cyan-dim) transparent;
+#jarvis-text {
+  font-size: clamp(17px, 2.6vw, 24px);
+  color: rgba(79, 227, 255, 0.92);
+  line-height: 1.55;
+  min-height: 52px;
+  transition: opacity 0.5s;
 }
-#transcript::-webkit-scrollbar { width: 6px; }
-#transcript::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 3px; }
 
-.msg { max-width: 80%; padding: 8px 14px; border-radius: 10px; font-size: 17px; line-height: 1.4; }
-.msg .who { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.6; display: block; margin-bottom: 2px; }
-.msg.user { align-self: flex-end; background: rgba(255, 182, 72, 0.12); border: 1px solid rgba(255, 182, 72, 0.35); color: #ffd9a0; }
-.msg.jarvis { align-self: flex-start; background: rgba(79, 227, 255, 0.08); border: 1px solid rgba(79, 227, 255, 0.3); color: #d4f7ff; }
+#user-text {
+  font-size: clamp(13px, 1.8vw, 16px);
+  color: rgba(255, 182, 72, 0.6);
+  margin-top: 6px;
+}
 
-#controls {
+#bottom {
+  position: fixed;
+  bottom: 28px;
+  left: 0; right: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-top: 8px;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 24px;
 }
+
 #mic-btn {
-  width: 58px; height: 58px;
-  flex: 0 0 auto;
+  width: 68px; height: 68px;
   border-radius: 50%;
-  border: 2px solid var(--cyan);
-  background: rgba(79, 227, 255, 0.08);
-  color: var(--cyan);
+  border: 2px solid #4fe3ff;
+  background: rgba(79, 227, 255, 0.06);
+  color: #4fe3ff;
   cursor: pointer;
   display: grid; place-items: center;
+  flex-shrink: 0;
   transition: all 0.2s;
-  box-shadow: 0 0 14px rgba(79,227,255,0.3);
+  box-shadow: 0 0 20px rgba(79,227,255,0.25);
 }
-#mic-btn:hover { background: rgba(79, 227, 255, 0.2); }
+#mic-btn:hover { background: rgba(79, 227, 255, 0.15); }
 #mic-btn.recording {
-  border-color: var(--amber);
-  color: var(--amber);
-  background: rgba(255, 182, 72, 0.2);
-  box-shadow: 0 0 24px rgba(255,182,72,0.6);
+  border-color: #ffb648;
+  color: #ffb648;
+  background: rgba(255, 182, 72, 0.12);
+  box-shadow: 0 0 32px rgba(255,182,72,0.6);
   animation: micpulse 1s ease-in-out infinite;
 }
+
 #text-input {
   flex: 1;
-  background: var(--panel);
-  border: 1px solid rgba(79, 227, 255, 0.25);
-  border-radius: 8px;
-  padding: 14px 16px;
-  color: var(--cyan);
+  max-width: 380px;
+  background: rgba(10, 26, 38, 0.75);
+  border: 1px solid rgba(79, 227, 255, 0.2);
+  border-radius: 32px;
+  padding: 14px 20px;
+  color: #4fe3ff;
   font-family: "Rajdhani", sans-serif;
   font-size: 17px;
   outline: none;
 }
-#text-input::placeholder { color: rgba(79, 227, 255, 0.4); }
-#text-input:focus { border-color: var(--cyan); box-shadow: 0 0 12px var(--cyan-glow); }
+#text-input::placeholder { color: rgba(79, 227, 255, 0.3); }
+#text-input:focus { border-color: rgba(79, 227, 255, 0.6); }
 
-#mute-btn, #reset-btn {
-  flex: 0 0 auto;
-  background: transparent;
-  border: 1px solid rgba(79, 227, 255, 0.3);
-  color: var(--cyan);
-  font-family: "Orbitron", sans-serif;
-  font-size: 11px;
-  letter-spacing: 1px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-#mute-btn:hover, #reset-btn:hover { background: rgba(79, 227, 255, 0.12); }
-#mute-btn.off { border-color: rgba(255, 80, 80, 0.5); color: #ff8080; }
-
-#hint {
-  text-align: center;
-  font-size: 12px;
-  letter-spacing: 1px;
-  opacity: 0.4;
-  padding-top: 6px;
-}
-
-@keyframes micpulse { 0%, 100% { box-shadow: 0 0 24px rgba(255,182,72,0.6); } 50% { box-shadow: 0 0 36px rgba(255,182,72,0.9); } }
-
-@media (max-width: 640px) {
-  .subtitle { display: none; }
-  #mute-btn, #reset-btn { padding: 10px 8px; font-size: 10px; }
+@keyframes micpulse {
+  0%, 100% { box-shadow: 0 0 32px rgba(255,182,72,0.6); }
+  50% { box-shadow: 0 0 52px rgba(255,182,72,0.9); }
 }

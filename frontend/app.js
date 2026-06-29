@@ -1,38 +1,26 @@
-/* JARVIS – Frontend-Logik: Neural-Orb, Spracherkennung, Sprachausgabe, Streaming-Chat. */
+/* JARVIS – Minimal: Neural Orb + Voice */
 
-const stateLabel = document.getElementById("state-label");
-const transcript = document.getElementById("transcript");
 const micBtn = document.getElementById("mic-btn");
 const textInput = document.getElementById("text-input");
-const muteBtn = document.getElementById("mute-btn");
-const resetBtn = document.getElementById("reset-btn");
-const clock = document.getElementById("clock");
+const jarvisText = document.getElementById("jarvis-text");
+const userText = document.getElementById("user-text");
 
 const SESSION_ID = "sess-" + Math.random().toString(36).slice(2);
-let voiceEnabled = true;
 let isBusy = false;
+let fadeTimer = null;
 
-/* ---------- Uhr ---------- */
-function tickClock() {
-  clock.textContent = new Date().toLocaleTimeString("de-DE");
-}
-setInterval(tickClock, 1000);
-tickClock();
-
-/* ---------- Neural Orb (Canvas) ---------- */
+/* ---------- Neural Orb ---------- */
 const orbCanvas = document.getElementById("orb");
 const ctx = orbCanvas.getContext("2d");
-
 const DPR = window.devicePixelRatio || 1;
-const SIZE = 280;
+const SIZE = Math.min(window.innerWidth, window.innerHeight) * 0.72;
 orbCanvas.width = SIZE * DPR;
 orbCanvas.height = SIZE * DPR;
 orbCanvas.style.width = SIZE + "px";
 orbCanvas.style.height = SIZE + "px";
 ctx.scale(DPR, DPR);
 
-const CX = SIZE / 2;
-const CY = SIZE / 2;
+const CX = SIZE / 2, CY = SIZE / 2;
 const SPHERE_R = SIZE * 0.37;
 const NODE_COUNT = 160;
 
@@ -56,7 +44,7 @@ for (let a = 0; a < NODE_COUNT; a++) {
     const dx = nodes[a].x - nodes[b].x;
     const dy = nodes[a].y - nodes[b].y;
     const dz = nodes[a].z - nodes[b].z;
-    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const d = Math.sqrt(dx*dx + dy*dy + dz*dz);
     if (d < MAX_CONN) connections.push([a, b, d / MAX_CONN]);
   }
 }
@@ -86,22 +74,17 @@ function drawOrb(ts) {
   const t = ts * 0.001;
   const cfg = ORB_CFG[orbMode] || ORB_CFG.idle;
   const [r, g, b] = cfg.rgb;
-
   ctx.clearRect(0, 0, SIZE, SIZE);
   rotY += cfg.speed;
 
   const pts = nodes.map(n => {
     const disp = Math.sin(t * n.freq + n.phase) * cfg.amp;
-    return project3D(
-      n.x * (1 + disp / SPHERE_R),
-      n.y * (1 + disp / SPHERE_R),
-      n.z * (1 + disp / SPHERE_R)
-    );
+    return project3D(n.x*(1+disp/SPHERE_R), n.y*(1+disp/SPHERE_R), n.z*(1+disp/SPHERE_R));
   });
 
   for (const [a, b, ratio] of connections) {
     const pa = pts[a], pb = pts[b];
-    const alpha = (1 - ratio) * ((pa.depth + pb.depth) * 0.5) * 0.48;
+    const alpha = (1-ratio) * ((pa.depth+pb.depth)*0.5) * 0.48;
     if (alpha < 0.02) continue;
     ctx.beginPath();
     ctx.moveTo(pa.px, pa.py);
@@ -114,61 +97,36 @@ function drawOrb(ts) {
   ctx.shadowColor = `rgb(${r},${g},${b})`;
   ctx.shadowBlur = orbMode === "speaking" ? 14 : orbMode === "listening" ? 10 : 5;
   for (const p of pts) {
-    const alpha = 0.3 + p.depth * 0.7;
-    const size = 0.6 + p.depth * 2.8;
-    ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+    ctx.fillStyle = `rgba(${r},${g},${b},${(0.3+p.depth*0.7).toFixed(2)})`;
     ctx.beginPath();
-    ctx.arc(p.px, p.py, size, 0, Math.PI * 2);
+    ctx.arc(p.px, p.py, 0.6+p.depth*2.8, 0, Math.PI*2);
     ctx.fill();
   }
   ctx.shadowBlur = 0;
 
   const pulse = 1 + 0.1 * Math.sin(t * 2.8);
   const glowR = SPHERE_R * 0.28 * cfg.glow * pulse;
-  const grd = ctx.createRadialGradient(CX, CY, 0, CX, CY, glowR);
+  const grd = ctx.createRadialGradient(CX,CY,0,CX,CY,glowR);
   grd.addColorStop(0, `rgba(${r},${g},${b},0.2)`);
   grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
   ctx.fillStyle = grd;
   ctx.beginPath();
-  ctx.arc(CX, CY, glowR, 0, Math.PI * 2);
+  ctx.arc(CX, CY, glowR, 0, Math.PI*2);
   ctx.fill();
 
   requestAnimationFrame(drawOrb);
 }
 requestAnimationFrame(drawOrb);
 
-/* ---------- HUD-Zustand ---------- */
-function setState(mode, label) {
-  orbMode = mode;
-  stateLabel.textContent = label;
-}
-setState("idle", "System bereit");
-
-/* ---------- Transkript ---------- */
-function addMessage(who, text) {
-  const el = document.createElement("div");
-  el.className = "msg " + who;
-  el.innerHTML = `<span class="who">${who === "user" ? "Sie" : "Jarvis"}</span>`;
-  const body = document.createElement("span");
-  body.className = "body";
-  body.textContent = text;
-  el.appendChild(body);
-  transcript.appendChild(el);
-  transcript.scrollTop = transcript.scrollHeight;
-  return body;
-}
-
-/* ---------- Sprachausgabe (TTS) ---------- */
+/* ---------- TTS – maennliche Stimme ---------- */
 let germanVoice = null;
 function pickVoice() {
   const voices = speechSynthesis.getVoices();
   const de = voices.filter(v => v.lang.startsWith("de"));
   germanVoice =
-    de.find(v => /markus|luca|yannick|stefan|hans|georg|daniel|male/i.test(v.name)) ||
-    de.find(v => !/anna|sara|marie|julia|female/i.test(v.name) && de.indexOf(v) > 0) ||
-    de.find(v => /google/i.test(v.name)) ||
-    de[0] ||
-    null;
+    de.find(v => /markus|luca|yannick|stefan|hans|georg|daniel/i.test(v.name)) ||
+    de.find(v => !/anna|sara|marie|julia/i.test(v.name) && de.indexOf(v) > 0) ||
+    de[0] || null;
 }
 pickVoice();
 speechSynthesis.onvoiceschanged = pickVoice;
@@ -177,7 +135,7 @@ let speechQueue = [];
 let speaking = false;
 
 function enqueueSpeech(sentence) {
-  if (!voiceEnabled || !sentence.trim()) return;
+  if (!sentence.trim()) return;
   speechQueue.push(sentence.trim());
   if (!speaking) playNext();
 }
@@ -185,32 +143,41 @@ function enqueueSpeech(sentence) {
 function playNext() {
   if (speechQueue.length === 0) {
     speaking = false;
-    if (!isBusy) setState("idle", "System bereit");
+    orbMode = "idle";
+    fadeTimer = setTimeout(() => {
+      jarvisText.style.opacity = "0.3";
+    }, 5000);
     return;
   }
   speaking = true;
-  setState("speaking", "Jarvis spricht");
+  orbMode = "speaking";
   const utter = new SpeechSynthesisUtterance(speechQueue.shift());
   utter.lang = "de-DE";
   if (germanVoice) utter.voice = germanVoice;
-  utter.rate = 1.0;
+  utter.rate = 1.05;
   utter.pitch = 0.8;
   utter.onend = playNext;
   utter.onerror = playNext;
   speechSynthesis.speak(utter);
 }
 
-/* ---------- Chat-Streaming ---------- */
+/* ---------- Chat ---------- */
 async function sendMessage(message) {
   if (isBusy || !message.trim()) return;
   isBusy = true;
+  clearTimeout(fadeTimer);
   stopListening();
-  addMessage("user", message);
-  setState("thinking", "Verarbeite Anfrage");
+  speechSynthesis.cancel();
+  speechQueue = [];
+  speaking = false;
 
-  const jarvisBody = addMessage("jarvis", "");
+  userText.textContent = message;
+  jarvisText.textContent = "";
+  jarvisText.style.opacity = "1";
+  orbMode = "thinking";
+
+  let fullText = "";
   let buffer = "";
-  let spokeAnything = false;
 
   try {
     const resp = await fetch("/api/chat", {
@@ -233,34 +200,30 @@ async function sendMessage(message) {
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
         const evt = JSON.parse(line.slice(6));
-
-        if (evt.type === "status" && evt.status === "searching") {
-          setState("thinking", "Recherchiere im Netz");
-        } else if (evt.type === "text") {
-          jarvisBody.textContent += evt.text;
+        if (evt.type === "text") {
+          fullText += evt.text;
+          jarvisText.textContent = fullText;
           buffer += evt.text;
-          transcript.scrollTop = transcript.scrollHeight;
           const match = buffer.match(/^(.*?[.!?…]+)\s+/s);
           if (match) {
             enqueueSpeech(match[1]);
-            spokeAnything = true;
             buffer = buffer.slice(match[0].length);
           }
         } else if (evt.type === "done") {
-          if (buffer.trim()) { enqueueSpeech(buffer); spokeAnything = true; }
+          if (buffer.trim()) enqueueSpeech(buffer);
         }
       }
     }
-  } catch (err) {
-    jarvisBody.textContent = "Verbindungsproblem, Sir. Ich erreiche das System gerade nicht.";
-    enqueueSpeech(jarvisBody.textContent);
+  } catch {
+    jarvisText.textContent = "Verbindungsproblem, Sir.";
+    enqueueSpeech(jarvisText.textContent);
   } finally {
     isBusy = false;
-    if (!speaking) setState("idle", "System bereit");
+    if (!speaking) orbMode = "idle";
   }
 }
 
-/* ---------- Spracherkennung (STT) ---------- */
+/* ---------- STT ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let listening = false;
@@ -272,38 +235,33 @@ if (SR) {
   recognition.continuous = false;
 
   recognition.onresult = (e) => {
-    let finalText = "";
-    let interim = "";
+    let final = "", interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) finalText += t;
-      else interim += t;
+      if (e.results[i].isFinal) final += t; else interim += t;
     }
-    textInput.value = finalText || interim;
+    textInput.value = final || interim;
   };
   recognition.onend = () => {
     listening = false;
     micBtn.classList.remove("recording");
-    if (!isBusy && !speaking) setState("idle", "System bereit");
+    if (!isBusy) orbMode = "idle";
     const text = textInput.value.trim();
     if (text) { textInput.value = ""; sendMessage(text); }
   };
   recognition.onerror = () => { listening = false; micBtn.classList.remove("recording"); };
 } else {
   micBtn.disabled = true;
-  micBtn.title = "Spracherkennung nicht verfuegbar – bitte Safari nutzen.";
 }
 
 function startListening() {
   if (!recognition || listening || isBusy) return;
-  speechSynthesis.cancel();
-  speechQueue = [];
-  speaking = false;
+  speechSynthesis.cancel(); speechQueue = []; speaking = false;
   try {
     recognition.start();
     listening = true;
     micBtn.classList.add("recording");
-    setState("listening", "Ich hoere zu …");
+    orbMode = "listening";
   } catch (_) {}
 }
 
@@ -311,19 +269,16 @@ function stopListening() {
   if (recognition && listening) recognition.stop();
 }
 
-/* ---------- Bedienung ---------- */
-micBtn.addEventListener("click", () => (listening ? stopListening() : startListening()));
+micBtn.addEventListener("click", () => listening ? stopListening() : startListening());
 
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && document.activeElement !== textInput && !e.repeat) {
-    e.preventDefault();
-    startListening();
+    e.preventDefault(); startListening();
   }
 });
 document.addEventListener("keyup", (e) => {
   if (e.code === "Space" && document.activeElement !== textInput) {
-    e.preventDefault();
-    stopListening();
+    e.preventDefault(); stopListening();
   }
 });
 
@@ -335,35 +290,12 @@ textInput.addEventListener("keydown", (e) => {
   }
 });
 
-muteBtn.addEventListener("click", () => {
-  voiceEnabled = !voiceEnabled;
-  muteBtn.textContent = "Sprache: " + (voiceEnabled ? "An" : "Aus");
-  muteBtn.classList.toggle("off", !voiceEnabled);
-  if (!voiceEnabled) { speechSynthesis.cancel(); speechQueue = []; speaking = false; }
-});
-
-resetBtn.addEventListener("click", async () => {
-  speechSynthesis.cancel();
-  speechQueue = [];
-  speaking = false;
-  transcript.innerHTML = "";
-  await fetch("/api/reset", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: SESSION_ID, message: "" }),
-  });
-  setState("idle", "System bereit");
-});
-
-/* ---------- Begruessung ---------- */
+/* ---------- Start ---------- */
 window.addEventListener("load", () => {
   const hour = new Date().getHours();
-  const greet =
-    hour < 11 ? "Guten Morgen, Sir." :
-    hour < 18 ? "Guten Tag, Sir." :
-    "Guten Abend, Sir.";
-  const msg = greet + " Alle Systeme online. Womit kann ich dienen?";
-  addMessage("jarvis", msg);
+  const greet = hour < 11 ? "Morgen, Sir." : hour < 18 ? "Tag, Sir." : "Abend, Sir.";
+  const msg = greet + " Womit kann ich dienen?";
+  jarvisText.textContent = msg;
   const unlock = () => {
     enqueueSpeech(msg);
     document.removeEventListener("click", unlock);
