@@ -17,7 +17,6 @@ html, body {
   overflow: hidden;
 }
 
-/* feines Hintergrund-Gitter */
 body::before {
   content: "";
   position: fixed;
@@ -39,7 +38,6 @@ body::before {
   z-index: 1;
 }
 
-/* Eck-Klammern */
 .corner {
   position: fixed;
   width: 46px;
@@ -53,7 +51,6 @@ body::before {
 .bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
 .br { bottom: 14px; right: 14px; border-left: none; border-top: none; }
 
-/* Topbar */
 #topbar {
   display: flex;
   align-items: baseline;
@@ -83,77 +80,20 @@ body::before {
   text-shadow: 0 0 10px rgba(255, 182, 72, 0.4);
 }
 
-/* Buehne mit Reaktor */
 #stage {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
+  gap: 18px;
   min-height: 0;
 }
 
-#reactor {
-  position: relative;
-  width: clamp(180px, 26vh, 280px);
+#orb {
+  width: clamp(200px, 36vh, 300px);
   aspect-ratio: 1;
-  display: grid;
-  place-items: center;
+  filter: drop-shadow(0 0 28px rgba(79, 227, 255, 0.3));
 }
-
-.ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid var(--cyan-dim);
-}
-.ring-outer {
-  inset: 0;
-  border-top-color: var(--cyan);
-  border-right-color: var(--cyan);
-  animation: spin 8s linear infinite;
-  box-shadow: 0 0 20px var(--cyan-glow), inset 0 0 20px rgba(79,227,255,0.2);
-}
-.ring-mid {
-  inset: 16%;
-  border-bottom-color: var(--cyan);
-  border-left-color: var(--cyan);
-  animation: spin 5s linear infinite reverse;
-  opacity: 0.8;
-}
-.ring-inner {
-  inset: 32%;
-  border-top-color: var(--amber);
-  border-left-color: var(--amber);
-  animation: spin 3.5s linear infinite;
-  opacity: 0.7;
-}
-.core {
-  width: 30%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, #eafdff 0%, var(--cyan) 45%, var(--cyan-dim) 100%);
-  box-shadow: 0 0 40px var(--cyan-glow), 0 0 80px var(--cyan-glow);
-  animation: pulse 3s ease-in-out infinite;
-}
-.ticks {
-  position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  background:
-    repeating-conic-gradient(from 0deg,
-      var(--cyan-dim) 0deg 1deg, transparent 1deg 9deg);
-  opacity: 0.4;
-  mask: radial-gradient(circle, transparent 60%, #000 61%, #000 66%, transparent 67%);
-  -webkit-mask: radial-gradient(circle, transparent 60%, #000 61%, #000 66%, transparent 67%);
-}
-
-/* Zustaende */
-#reactor.listening .core { animation: pulse 0.7s ease-in-out infinite; background: radial-gradient(circle, #fff 0%, var(--amber) 50%, #b5701a 100%); box-shadow: 0 0 50px rgba(255,182,72,0.7), 0 0 100px rgba(255,182,72,0.5); }
-#reactor.listening .ring-outer { border-top-color: var(--amber); border-right-color: var(--amber); animation-duration: 2s; }
-#reactor.thinking .ring-outer,
-#reactor.thinking .ring-mid,
-#reactor.thinking .ring-inner { animation-duration: 1s; }
-#reactor.speaking .core { animation: pulse 0.5s ease-in-out infinite; }
 
 #state-label {
   font-family: "Orbitron", sans-serif;
@@ -164,27 +104,6 @@ body::before {
   text-shadow: 0 0 10px var(--cyan-glow);
 }
 
-/* Visualizer */
-#visualizer {
-  display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  height: 40px;
-}
-#visualizer span {
-  width: 4px;
-  height: 6px;
-  background: var(--cyan);
-  box-shadow: 0 0 8px var(--cyan-glow);
-  border-radius: 2px;
-  transition: height 0.08s ease;
-}
-#visualizer.active span { animation: bars 0.9s ease-in-out infinite; }
-#visualizer.active span:nth-child(odd) { animation-delay: 0.15s; }
-#visualizer.active span:nth-child(3n) { animation-delay: 0.3s; }
-#visualizer.active span:nth-child(4n) { animation-delay: 0.45s; }
-
-/* Transkript */
 #transcript {
   height: clamp(120px, 22vh, 240px);
   overflow-y: auto;
@@ -207,7 +126,6 @@ body::before {
 .msg.user { align-self: flex-end; background: rgba(255, 182, 72, 0.12); border: 1px solid rgba(255, 182, 72, 0.35); color: #ffd9a0; }
 .msg.jarvis { align-self: flex-start; background: rgba(79, 227, 255, 0.08); border: 1px solid rgba(79, 227, 255, 0.3); color: #d4f7ff; }
 
-/* Controls */
 #controls {
   display: flex;
   align-items: center;
@@ -272,11 +190,7 @@ body::before {
   padding-top: 6px;
 }
 
-/* Animationen */
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.85; } }
 @keyframes micpulse { 0%, 100% { box-shadow: 0 0 24px rgba(255,182,72,0.6); } 50% { box-shadow: 0 0 36px rgba(255,182,72,0.9); } }
-@keyframes bars { 0%, 100% { height: 6px; } 50% { height: 38px; } }
 
 @media (max-width: 640px) {
   .subtitle { display: none; }

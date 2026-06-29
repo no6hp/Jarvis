@@ -1,8 +1,6 @@
-/* JARVIS – Frontend-Logik: Spracherkennung, Sprachausgabe und Streaming-Chat. */
+/* JARVIS – Frontend-Logik: Neural-Orb, Spracherkennung, Sprachausgabe, Streaming-Chat. */
 
-const reactor = document.getElementById("reactor");
 const stateLabel = document.getElementById("state-label");
-const visualizer = document.getElementById("visualizer");
 const transcript = document.getElementById("transcript");
 const micBtn = document.getElementById("mic-btn");
 const textInput = document.getElementById("text-input");
@@ -21,11 +19,128 @@ function tickClock() {
 setInterval(tickClock, 1000);
 tickClock();
 
+/* ---------- Neural Orb (Canvas) ---------- */
+const orbCanvas = document.getElementById("orb");
+const ctx = orbCanvas.getContext("2d");
+
+const DPR = window.devicePixelRatio || 1;
+const SIZE = 280;
+orbCanvas.width = SIZE * DPR;
+orbCanvas.height = SIZE * DPR;
+orbCanvas.style.width = SIZE + "px";
+orbCanvas.style.height = SIZE + "px";
+ctx.scale(DPR, DPR);
+
+const CX = SIZE / 2;
+const CY = SIZE / 2;
+const SPHERE_R = SIZE * 0.37;
+const NODE_COUNT = 160;
+
+const nodes = [];
+for (let i = 0; i < NODE_COUNT; i++) {
+  const theta = 2 * Math.PI * Math.random();
+  const phi = Math.acos(1 - 2 * Math.random());
+  nodes.push({
+    x: SPHERE_R * Math.sin(phi) * Math.cos(theta),
+    y: SPHERE_R * Math.sin(phi) * Math.sin(theta),
+    z: SPHERE_R * Math.cos(phi),
+    phase: Math.random() * Math.PI * 2,
+    freq: 0.4 + Math.random() * 1.3,
+  });
+}
+
+const MAX_CONN = SPHERE_R * 0.72;
+const connections = [];
+for (let a = 0; a < NODE_COUNT; a++) {
+  for (let b = a + 1; b < NODE_COUNT; b++) {
+    const dx = nodes[a].x - nodes[b].x;
+    const dy = nodes[a].y - nodes[b].y;
+    const dz = nodes[a].z - nodes[b].z;
+    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (d < MAX_CONN) connections.push([a, b, d / MAX_CONN]);
+  }
+}
+
+let rotY = 0;
+const rotX = 0.28;
+let orbMode = "idle";
+
+const ORB_CFG = {
+  idle:      { speed: 0.003, rgb: [79, 227, 255],  amp: 3,  glow: 1.0 },
+  listening: { speed: 0.012, rgb: [255, 182, 72],  amp: 8,  glow: 1.4 },
+  thinking:  { speed: 0.020, rgb: [79, 200, 255],  amp: 5,  glow: 1.1 },
+  speaking:  { speed: 0.014, rgb: [100, 255, 210], amp: 13, glow: 1.7 },
+};
+
+function project3D(x, y, z) {
+  const x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
+  const z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
+  const y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+  const z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+  const fov = 500;
+  const s = fov / (fov + z2 + SPHERE_R);
+  return { px: x1 * s + CX, py: y2 * s + CY, depth: (z2 + SPHERE_R) / (2 * SPHERE_R) };
+}
+
+function drawOrb(ts) {
+  const t = ts * 0.001;
+  const cfg = ORB_CFG[orbMode] || ORB_CFG.idle;
+  const [r, g, b] = cfg.rgb;
+
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  rotY += cfg.speed;
+
+  const pts = nodes.map(n => {
+    const disp = Math.sin(t * n.freq + n.phase) * cfg.amp;
+    return project3D(
+      n.x * (1 + disp / SPHERE_R),
+      n.y * (1 + disp / SPHERE_R),
+      n.z * (1 + disp / SPHERE_R)
+    );
+  });
+
+  for (const [a, b, ratio] of connections) {
+    const pa = pts[a], pb = pts[b];
+    const alpha = (1 - ratio) * ((pa.depth + pb.depth) * 0.5) * 0.48;
+    if (alpha < 0.02) continue;
+    ctx.beginPath();
+    ctx.moveTo(pa.px, pa.py);
+    ctx.lineTo(pb.px, pb.py);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+    ctx.lineWidth = 0.65;
+    ctx.stroke();
+  }
+
+  ctx.shadowColor = `rgb(${r},${g},${b})`;
+  ctx.shadowBlur = orbMode === "speaking" ? 14 : orbMode === "listening" ? 10 : 5;
+  for (const p of pts) {
+    const alpha = 0.3 + p.depth * 0.7;
+    const size = 0.6 + p.depth * 2.8;
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(p.px, p.py, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  const pulse = 1 + 0.1 * Math.sin(t * 2.8);
+  const glowR = SPHERE_R * 0.28 * cfg.glow * pulse;
+  const grd = ctx.createRadialGradient(CX, CY, 0, CX, CY, glowR);
+  grd.addColorStop(0, `rgba(${r},${g},${b},0.2)`);
+  grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(CX, CY, glowR, 0, Math.PI * 2);
+  ctx.fill();
+
+  requestAnimationFrame(drawOrb);
+}
+requestAnimationFrame(drawOrb);
+
 /* ---------- HUD-Zustand ---------- */
 function setState(mode, label) {
-  reactor.className = mode;
+  orbMode = mode;
   stateLabel.textContent = label;
-  visualizer.classList.toggle("active", mode === "listening" || mode === "speaking");
 }
 setState("idle", "System bereit");
 
@@ -47,15 +162,17 @@ function addMessage(who, text) {
 let germanVoice = null;
 function pickVoice() {
   const voices = speechSynthesis.getVoices();
+  const de = voices.filter(v => v.lang.startsWith("de"));
   germanVoice =
-    voices.find((v) => v.lang.startsWith("de") && /google/i.test(v.name)) ||
-    voices.find((v) => v.lang.startsWith("de")) ||
+    de.find(v => /markus|luca|yannick|stefan|hans|georg|daniel|male/i.test(v.name)) ||
+    de.find(v => !/anna|sara|marie|julia|female/i.test(v.name) && de.indexOf(v) > 0) ||
+    de.find(v => /google/i.test(v.name)) ||
+    de[0] ||
     null;
 }
 pickVoice();
 speechSynthesis.onvoiceschanged = pickVoice;
 
-// Antworten werden satzweise vorgelesen, sobald sie eintreffen.
 let speechQueue = [];
 let speaking = false;
 
@@ -76,8 +193,8 @@ function playNext() {
   const utter = new SpeechSynthesisUtterance(speechQueue.shift());
   utter.lang = "de-DE";
   if (germanVoice) utter.voice = germanVoice;
-  utter.rate = 1.05;
-  utter.pitch = 1.0;
+  utter.rate = 1.0;
+  utter.pitch = 0.8;
   utter.onend = playNext;
   utter.onerror = playNext;
   speechSynthesis.speak(utter);
@@ -92,7 +209,7 @@ async function sendMessage(message) {
   setState("thinking", "Verarbeite Anfrage");
 
   const jarvisBody = addMessage("jarvis", "");
-  let buffer = "";       // ungesprochener Rest fuer die Satz-Erkennung
+  let buffer = "";
   let spokeAnything = false;
 
   try {
@@ -123,8 +240,6 @@ async function sendMessage(message) {
           jarvisBody.textContent += evt.text;
           buffer += evt.text;
           transcript.scrollTop = transcript.scrollHeight;
-
-          // Vollstaendige Saetze sofort vorlesen.
           const match = buffer.match(/^(.*?[.!?…]+)\s+/s);
           if (match) {
             enqueueSpeech(match[1]);
@@ -156,9 +271,8 @@ if (SR) {
   recognition.interimResults = true;
   recognition.continuous = false;
 
-  let finalText = "";
   recognition.onresult = (e) => {
-    finalText = "";
+    let finalText = "";
     let interim = "";
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
@@ -177,12 +291,11 @@ if (SR) {
   recognition.onerror = () => { listening = false; micBtn.classList.remove("recording"); };
 } else {
   micBtn.disabled = true;
-  micBtn.title = "Spracherkennung in diesem Browser nicht verfuegbar – bitte Chrome/Edge nutzen.";
+  micBtn.title = "Spracherkennung nicht verfuegbar – bitte Safari nutzen.";
 }
 
 function startListening() {
   if (!recognition || listening || isBusy) return;
-  // Laufende Sprachausgabe stoppen, damit man JARVIS unterbrechen kann.
   speechSynthesis.cancel();
   speechQueue = [];
   speaking = false;
@@ -191,7 +304,7 @@ function startListening() {
     listening = true;
     micBtn.classList.add("recording");
     setState("listening", "Ich hoere zu …");
-  } catch (_) { /* bereits gestartet */ }
+  } catch (_) {}
 }
 
 function stopListening() {
@@ -201,7 +314,6 @@ function stopListening() {
 /* ---------- Bedienung ---------- */
 micBtn.addEventListener("click", () => (listening ? stopListening() : startListening()));
 
-// Leertaste gedrueckt halten = sprechen (nur wenn nicht im Textfeld).
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space" && document.activeElement !== textInput && !e.repeat) {
     e.preventDefault();
@@ -250,10 +362,13 @@ window.addEventListener("load", () => {
     hour < 11 ? "Guten Morgen, Sir." :
     hour < 18 ? "Guten Tag, Sir." :
     "Guten Abend, Sir.";
-  const msg = greet + " Alle Systeme sind online. Womit kann ich helfen – die Maerkte, die Lage, ein Kunde?";
+  const msg = greet + " Alle Systeme online. Womit kann ich dienen?";
   addMessage("jarvis", msg);
-  // Erste Sprachausgabe erst nach Nutzer-Interaktion erlauben (Browser-Politik).
-  const unlock = () => { enqueueSpeech(msg); document.removeEventListener("click", unlock); document.removeEventListener("keydown", unlock); };
+  const unlock = () => {
+    enqueueSpeech(msg);
+    document.removeEventListener("click", unlock);
+    document.removeEventListener("keydown", unlock);
+  };
   document.addEventListener("click", unlock);
   document.addEventListener("keydown", unlock);
 });

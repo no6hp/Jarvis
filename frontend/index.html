@@ -10,7 +10,6 @@
 </head>
 <body>
   <div id="hud">
-    <!-- Eck-Rahmen des HUD -->
     <div class="corner tl"></div>
     <div class="corner tr"></div>
     <div class="corner bl"></div>
@@ -23,26 +22,10 @@
     </header>
 
     <main id="stage">
-      <!-- Arc-Reactor / zentrales Auge -->
-      <div id="reactor" class="idle">
-        <div class="ring ring-outer"></div>
-        <div class="ring ring-mid"></div>
-        <div class="ring ring-inner"></div>
-        <div class="core"></div>
-        <div class="ticks"></div>
-      </div>
-
+      <canvas id="orb"></canvas>
       <div id="state-label">SYSTEM BEREIT</div>
-
-      <!-- Audio-Visualizer -->
-      <div id="visualizer">
-        <span></span><span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
     </main>
 
-    <!-- Gespraechs-Log -->
     <section id="transcript" aria-live="polite"></section>
 
     <footer id="controls">
